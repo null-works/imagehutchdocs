@@ -1392,7 +1392,7 @@ class Image
                 }
                 Storage::uploadFiles($toStorage, $storage, [
                     'keyprefix' => $storage_mode === 'datefolder'
-                        ? $dateFolder
+                        ? 'images/' . $dateFolder
                         : null,
                 ]);
             }
