@@ -17,7 +17,40 @@ use function Chevereto\Vars\request;
 // @phpstan-ignore-next-line
 if (!defined('ACCESS') || !ACCESS) {
     die('This file cannot be directly accessed.');
-} ?>
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generate_hierarchy') {
+    try {
+        $pdo_gen = new PDO('mysql:host=chevereto-database-1;dbname=chevereto', 'chevereto', 'chevereto_secure_password_456');
+        $pdo_gen->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $album_id = Handler::var('album')['id'];
+        $user_id = Handler::var('album')['user_id'];
+
+        $sub_albums_to_create = [
+            'Portrait',
+            'Rectangle/Banner',
+            'Secondary Square',
+            'Square',
+            'Tertiary Square'
+        ];
+
+        foreach ($sub_albums_to_create as $sub_name) {
+            $stmt_check = $pdo_gen->prepare("SELECT COUNT(*) FROM chv_albums WHERE album_parent_id = ? AND album_name = ?");
+            $stmt_check->execute([$album_id, $sub_name]);
+            if ($stmt_check->fetchColumn() == 0) {
+                $stmt_insert = $pdo_gen->prepare("INSERT INTO chv_albums (album_name, album_user_id, album_parent_id, album_date, album_date_gmt, album_creation_ip) VALUES (?, ?, ?, NOW(), NOW(), '127.0.0.1')");
+                $stmt_insert->execute([$sub_name, $user_id, $album_id]);
+            }
+        }
+
+        header("Location: " . $_SERVER['REQUEST_URI']);
+        exit;
+    } catch (Exception $e) {
+        // Fallback silently
+    }
+}
+?>
 <?php require_theme_header(); ?>
 
 <div class="content-width">
@@ -204,10 +237,27 @@ document.addEventListener("DOMContentLoaded", function() {
         $stmt_sub = $pdo_sub->prepare("SELECT * FROM chv_albums WHERE album_parent_id = ? ORDER BY album_name ASC");
         $stmt_sub->execute([Handler::var('album')['id']]);
         $sub_albums = $stmt_sub->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt_is_root = $pdo_sub->prepare("SELECT album_parent_id FROM chv_albums WHERE album_id = ?");
+        $stmt_is_root->execute([Handler::var('album')['id']]);
+        $parent_id_val = $stmt_is_root->fetchColumn();
+        $is_root_album = empty($parent_id_val);
     } catch (Exception $e) {
         $sub_albums = [];
+        $is_root_album = false;
     }
     ?>
+    <?php if ($is_root_album && (Handler::cond('owner') || Handler::cond('content_manager'))): ?>
+    <div style="margin-top: 20px; margin-bottom: 25px; display: flex; justify-content: flex-end;">
+        <form method="POST">
+            <input type="hidden" name="action" value="generate_hierarchy">
+            <button type="submit" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35); transition: all 0.2s ease; outline: none;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 18px rgba(2, 132, 199, 0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(2, 132, 199, 0.35)';">
+                <span class="fas fa-magic" style="color: #38bdf8; font-size: 1.1rem;"></span> Generate Character Hierarchy
+            </button>
+        </form>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($sub_albums)): ?>
     <div class="sub-albums-filemanager" style="margin-top: 15px; margin-bottom: 30px;">
         <h2 style="font-size: 1.25rem; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-primary);">
