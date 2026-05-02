@@ -118,6 +118,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
 
                 $sub_album_name = trim($sub_item);
 
+                // Map ZIP folder Rectangle_Banner to Rectangle/Banner in Chevereto
+                if ($sub_album_name === 'Rectangle_Banner') {
+                    $sub_album_name = 'Rectangle/Banner';
+                }
+
                 // Skip Avatar URL just in case some legacy ZIPs contain it
                 if ($sub_album_name === 'Avatar URL') {
                     continue;

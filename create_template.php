@@ -5,8 +5,10 @@ $filename = "/var/www/html/character_template.zip";
 if ($zip->open($filename, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
     $zip->addEmptyDir('Character Name');
     $zip->addEmptyDir('Character Name/Portrait');
-    $zip->addEmptyDir('Character Name/Square');
+    $zip->addEmptyDir('Character Name/Rectangle_Banner');
     $zip->addEmptyDir('Character Name/Secondary Square');
+    $zip->addEmptyDir('Character Name/Square');
+    $zip->addEmptyDir('Character Name/Tertiary Square');
     $zip->close();
     echo "Template zip created successfully.\n";
 } else {
