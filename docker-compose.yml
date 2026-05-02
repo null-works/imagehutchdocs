@@ -1,0 +1,52 @@
+services:
+  database:
+    image: mariadb:jammy
+    networks:
+      - chevereto
+    volumes:
+      - database:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      MYSQL_ROOT_PASSWORD: secure_root_password_123
+      MYSQL_DATABASE: chevereto
+      MYSQL_USER: chevereto
+      MYSQL_PASSWORD: chevereto_secure_password_456
+
+  php:
+    image: chevereto:4
+    networks:
+      - chevereto
+    volumes:
+      - storage:/var/www/html/images/
+      - app:/var/www/html/
+    restart: always
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      CHEVERETO_DB_HOST: database
+      CHEVERETO_DB_USER: chevereto
+      CHEVERETO_DB_PASS: chevereto_secure_password_456
+      CHEVERETO_DB_PORT: 3306
+      CHEVERETO_DB_NAME: chevereto
+      CHEVERETO_HOSTNAME: imagehut.ch
+      CHEVERETO_HOSTNAME_PATH: /
+      CHEVERETO_HTTPS: 0
+      CHEVERETO_MAX_POST_SIZE: 2G
+      CHEVERETO_MAX_UPLOAD_SIZE: 2G
+      CHEVERETO_SERVICING: server
+
+volumes:
+  database:
+  storage:
+  app:
+
+networks:
+  chevereto:
