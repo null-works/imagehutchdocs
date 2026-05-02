@@ -8,10 +8,12 @@ if (($_GET['token'] ?? '') !== 'KatImport' && ($_POST['token'] ?? '') !== 'KatIm
     die("Access denied");
 }
 
-$userId = (int)($_REQUEST['id'] ?? 1);
-if ($userId <= 0) {
-    die("Invalid user ID");
-}
+$pdo = new PDO("mysql:host=chevereto-database-1;dbname=chevereto", "chevereto", "chevereto_secure_password_456");
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+// Fetch all users for dropdown
+$stmt_users = $pdo->query("SELECT user_id, user_username, user_name FROM chv_users ORDER BY user_username ASC");
+$users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
 
 $output_results = [];
 $error_msg = '';
@@ -64,6 +66,15 @@ function cheveretoID($in, $action = 'encode') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
     try {
+        $userId = (int)($_POST['target_user'] ?? 0);
+        if ($userId <= 0) {
+            throw new Exception("Please select a target user.");
+        }
+
+        if (empty($_POST['confirm_user'])) {
+            throw new Exception("Please confirm that the target user is correct.");
+        }
+
         $zip_file = $_FILES['zip_file']['tmp_name'];
         if (empty($zip_file) || !file_exists($zip_file)) {
             throw new Exception("Please upload a valid ZIP file.");
@@ -78,9 +89,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
         mkdir($extract_dir, 0777, true);
         $zip->extractTo($extract_dir);
         $zip->close();
-
-        $pdo = new PDO("mysql:host=chevereto-database-1;dbname=chevereto", "chevereto", "chevereto_secure_password_456");
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         $dateDir = date('Y/m/d');
         $targetStorageDir = "/var/www/html/images/" . $dateDir . "/";
@@ -256,6 +264,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
             line-height: 1.6;
             margin-bottom: 30px;
         }
+        .form-group {
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+        }
+        select {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        select:focus {
+            border-color: #a855f7;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            cursor: pointer;
+        }
+        .checkbox-container input {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            accent-color: #a855f7;
+        }
+        .checkbox-container span {
+            font-size: 14px;
+            color: #94a3b8;
+        }
         .upload-zone {
             border: 2px dashed rgba(168, 85, 247, 0.4);
             border-radius: 14px;
@@ -284,13 +332,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
             background: var(--accent);
             border: none;
             color: white;
-            padding: 14px 28px;
+            padding: 16px 32px;
             font-size: 15px;
             font-weight: 600;
             border-radius: 12px;
             cursor: pointer;
             transition: all 0.25s ease-in-out;
             box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+            width: 100%;
         }
         .btn-action:hover {
             transform: translateY(-2px);
@@ -298,7 +347,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
         }
         .template-link {
             display: inline-block;
-            margin-top: 15px;
+            margin-top: 25px;
             color: #3b82f6;
             text-decoration: none;
             font-size: 14px;
@@ -321,7 +370,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 30px;
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border);
@@ -358,7 +407,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
 <body>
     <div class="container">
         <h1>Character Migration Tool</h1>
-        <p>Drag and drop your character folder ZIP into the box below. The tool will parse it, place the character images in the proper folders, and produce clickable randomizer links.</p>
+        <p>Choose the user's destination folder, confirm it, and drag &amp; drop your character ZIP file to instantly import characters and generate randomizer links.</p>
 
         <?php if (!empty($error_msg)): ?>
             <div class="alert"><?php echo htmlspecialchars($error_msg); ?></div>
@@ -366,12 +415,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
 
         <form action="" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="token" value="KatImport">
-            <input type="hidden" name="id" value="<?php echo (int)$userId; ?>">
+
+            <div class="form-group">
+                <label for="target_user">Target Destination Account</label>
+                <select id="target_user" name="target_user" required>
+                    <option value="">-- Choose Account --</option>
+                    <?php foreach ($users as $u): ?>
+                        <option value="<?php echo $u['user_id']; ?>" <?php echo (isset($_POST['target_user']) && $_POST['target_user'] == $u['user_id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($u['user_username'] . ($u['user_name'] ? ' (' . $u['user_name'] . ')' : '')); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <label class="checkbox-container">
+                <input type="checkbox" name="confirm_user" value="1" required <?php echo !empty($_POST['confirm_user']) ? 'checked' : ''; ?>>
+                <span>I confirm that I've selected the correct target user destination account.</span>
+            </label>
+
             <label class="upload-zone" for="zip_file">
                 <span style="font-size: 32px; color: #a855f7; margin-bottom: 5px;">📦</span>
-                <span>Select or drop a ZIP file here to import your characters</span>
-                <input id="zip_file" name="zip_file" type="file" accept=".zip" required onchange="this.form.submit()">
+                <span>Click here to choose your ZIP or drop it directly into this box</span>
+                <input id="zip_file" name="zip_file" type="file" accept=".zip" required>
             </label>
+
+            <button type="submit" class="btn-action">Confirm &amp; Import Character ZIP</button>
         </form>
 
         <a class="template-link" href="/character_template.zip" download>📥 Download Character Import Template ZIP</a>
