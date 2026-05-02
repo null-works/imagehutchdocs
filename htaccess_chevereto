@@ -12,8 +12,8 @@ Options -MultiViews
 	RewriteEngine On
 	# If you have problems with the rewrite rules remove the "#" from the following RewriteBase line
 	# You will also have to change the path to reflect the path to your Chevereto installation
-	# Bypass rewrite rules for assign_images applet
-	RewriteCond %{REQUEST_URI} ^/assign_images\.php$
+	# Bypass rewrite rules for custom apps/scripts
+	RewriteCond %{REQUEST_URI} ^/(import|refresh_counts|check_user)\.php$
 	RewriteRule . - [L]
 
 	# Redirect missing local images to external R2 storage
@@ -29,6 +29,6 @@ Options -MultiViews
 
 	# Single PHP-entrypoint
 	RewriteCond %{THE_REQUEST} ^.+?\ [^?]+\.php[?\ ] [NC]
-	RewriteCond %{REQUEST_URI} !^/assign_images\.php$
+	RewriteCond %{REQUEST_URI} !^/(import|refresh_counts|check_user)\.php$
 	RewriteRule \.php$ - [NC,L,F,R=404]
 </IfModule>
