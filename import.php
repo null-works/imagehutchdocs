@@ -118,6 +118,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
 
                 $sub_album_name = trim($sub_item);
 
+                // Skip Avatar URL just in case some legacy ZIPs contain it
+                if ($sub_album_name === 'Avatar URL') {
+                    continue;
+                }
+
                 // Check if sub-album exists
                 $stmt = $pdo->prepare("SELECT album_id FROM chv_albums WHERE album_user_id = ? AND album_name = ? AND album_parent_id = ?");
                 $stmt->execute([$userId, $sub_album_name, $parent_album_id]);
@@ -209,186 +214,176 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
     <title>Character Migration - ImageHut</title>
     <style>
         body {
-            background-color: #1a1c23;
-            color: #e2e8f0;
+            background-color: #16181d;
+            color: #d1d5db;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
-            padding: 40px 20px;
+            padding: 40px 15px;
         }
-        .main-wrapper {
-            max-width: 760px;
+        .main-container {
+            max-width: 680px;
             margin: 0 auto;
-            background: #242834;
-            border-radius: 8px;
-            padding: 35px;
-            border: 1px solid #333a4d;
+            background: #1f232b;
+            border: 1px solid #2d333f;
+            border-radius: 6px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         h1 {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 600;
             margin: 0 0 10px 0;
             color: #ffffff;
         }
         p.subtitle {
             margin: 0 0 25px 0;
-            color: #9aa3b1;
-            font-size: 14.5px;
-            line-height: 1.5;
+            color: #8b9bb4;
+            font-size: 14px;
+            line-height: 1.4;
         }
-        .field-box {
-            margin-bottom: 22px;
+        .form-field {
+            margin-bottom: 20px;
         }
-        label.field-label {
+        label.field-heading {
             display: block;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #cbd5e1;
+            color: #94a3b8;
             margin-bottom: 8px;
         }
-        select.custom-select {
+        select.form-input-select {
             width: 100%;
-            background-color: #2b303f;
-            border: 1px solid #3d465c;
+            background-color: #2b303d;
+            border: 1px solid #3d4659;
             color: #ffffff;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 14.5px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
             outline: none;
             box-sizing: border-box;
         }
-        select.custom-select:focus {
-            border-color: #5d6d8a;
+        select.form-input-select:focus {
+            border-color: #4a5568;
         }
-        .chk-box {
+        .confirm-wrapper {
             display: flex;
             align-items: center;
-            margin: 22px 0;
+            margin: 20px 0;
             cursor: pointer;
-            user-select: none;
         }
-        .chk-box input {
+        .confirm-wrapper input {
             width: 16px;
             height: 16px;
             margin-right: 10px;
             cursor: pointer;
         }
-        .chk-box span {
-            font-size: 14px;
-            color: #cbd5e1;
+        .confirm-wrapper span {
+            font-size: 13.5px;
+            color: #94a3b8;
         }
-        .drop-uploader {
-            border: 2px dashed #444c5e;
-            border-radius: 8px;
-            padding: 35px 20px;
-            text-align: center;
-            background: #1d212b;
-            cursor: pointer;
-            margin-bottom: 22px;
-            transition: background 0.1s ease;
+        .file-upload-box {
+            background-color: #2b303d;
+            border: 1px solid #3d4659;
+            border-radius: 4px;
+            padding: 18px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
         }
-        .drop-uploader:hover {
-            background: #252a37;
-            border-color: #64748b;
-        }
-        .drop-uploader span.primary-txt {
-            font-size: 15px;
-            font-weight: 500;
-            color: #f1f5f9;
-        }
-        .drop-uploader span.sub-txt {
-            display: block;
-            font-size: 12.5px;
-            color: #64748b;
-            margin-top: 6px;
-        }
-        .import-btn {
-            background-color: #3b82f6;
+        .file-upload-box input[type="file"] {
+            width: 100%;
             color: #ffffff;
-            font-size: 15px;
+            font-size: 13.5px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        .submit-import-btn {
+            background-color: #2563eb;
+            color: #ffffff;
+            font-size: 14.5px;
             font-weight: 600;
-            padding: 14px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 4px;
             border: none;
             cursor: pointer;
             width: 100%;
-            transition: background 0.1s ease;
+            transition: background-color 0.1s ease;
         }
-        .import-btn:hover {
-            background-color: #2563eb;
+        .submit-import-btn:hover {
+            background-color: #1d4ed8;
         }
-        .tpl-download {
+        .download-tpl-btn {
             display: inline-block;
-            margin-top: 25px;
-            color: #60a5fa;
+            margin-top: 20px;
+            color: #38bdf8;
             text-decoration: none;
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: 500;
         }
-        .tpl-download:hover {
+        .download-tpl-btn:hover {
             text-decoration: underline;
         }
-        .error-banner {
+        .error-message {
             background-color: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.3);
             color: #fca5a5;
-            padding: 14px;
-            border-radius: 6px;
-            font-size: 14px;
-            margin-bottom: 22px;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 13.5px;
+            margin-bottom: 20px;
         }
-        .results-box {
-            margin-top: 35px;
+        .import-results-container {
+            margin-top: 30px;
             padding-top: 25px;
-            border-top: 1px solid #333a4d;
+            border-top: 1px solid #2d333f;
         }
-        .results-box h2 {
+        .import-results-container h2 {
             font-size: 18px;
             margin: 0 0 15px 0;
             color: #ffffff;
         }
-        .results-table {
+        .results-list-table {
             width: 100%;
             border-collapse: collapse;
         }
-        .results-table th, .results-table td {
-            padding: 12px;
+        .results-list-table th, .results-list-table td {
+            padding: 10px;
             text-align: left;
-            font-size: 13.5px;
-            border-bottom: 1px solid #333a4d;
+            font-size: 13px;
+            border-bottom: 1px solid #2d333f;
         }
-        .results-table th {
-            color: #9aa3b1;
+        .results-list-table th {
+            color: #94a3b8;
             font-weight: 600;
-            background: #1d212b;
+            background: #2b303d;
         }
-        .results-table tr:hover td {
-            background: #2c3241;
+        .results-list-table tr:hover td {
+            background: #232835;
         }
-        .r-url {
-            color: #60a5fa;
+        .link-url-text {
+            color: #38bdf8;
             text-decoration: none;
             word-break: break-all;
         }
-        .r-url:hover {
+        .link-url-text:hover {
             text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div class="main-wrapper">
+    <div class="main-container">
         <h1>Character Migration Tool</h1>
-        <p class="subtitle">Select the destination account, confirm, and select your character template ZIP file.</p>
+        <p class="subtitle">Select destination account, confirm, and select your character template ZIP file to begin importing.</p>
 
         <?php if (!empty($error_msg)): ?>
-            <div class="error-banner"><?php echo htmlspecialchars($error_msg); ?></div>
+            <div class="error-message"><?php echo htmlspecialchars($error_msg); ?></div>
         <?php endif; ?>
 
         <form action="" method="POST" enctype="multipart/form-data">
-            <div class="field-box">
-                <label class="field-label" for="target_user">Target Account Folder</label>
-                <select class="custom-select" id="target_user" name="target_user" required>
+            <div class="form-field">
+                <label class="field-heading" for="target_user">Target Destination Account</label>
+                <select class="form-input-select" id="target_user" name="target_user" required>
                     <option value="">-- Choose Target Account --</option>
                     <?php foreach ($users as $u): ?>
                         <option value="<?php echo $u['user_id']; ?>" <?php echo (isset($_POST['target_user']) && $_POST['target_user'] == $u['user_id']) ? 'selected' : ''; ?>>
@@ -398,26 +393,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
                 </select>
             </div>
 
-            <label class="chk-box">
+            <label class="confirm-wrapper">
                 <input type="checkbox" name="confirm_user" value="1" required <?php echo !empty($_POST['confirm_user']) ? 'checked' : ''; ?>>
                 <span>I confirm that I have selected the correct target account.</span>
             </label>
 
-            <label class="drop-uploader" for="zip_file">
-                <span class="primary-txt">Choose ZIP File</span>
-                <span class="sub-txt">Supports standard character migration template files</span>
+            <div class="file-upload-box">
+                <label class="field-heading" style="margin-bottom: 10px; display: block;">Select Character ZIP File</label>
                 <input id="zip_file" name="zip_file" type="file" accept=".zip" required>
-            </label>
+            </div>
 
-            <button type="submit" class="import-btn">Process and Import Character ZIP</button>
+            <button type="submit" class="submit-import-btn">Process and Import Character ZIP</button>
         </form>
 
-        <a class="tpl-download" href="/character_template.zip" download>Download template ZIP file</a>
+        <a class="download-tpl-btn" href="/character_template.zip" download>Download template ZIP file</a>
 
         <?php if (!empty($output_results)): ?>
-            <div class="results-box">
+            <div class="import-results-container">
                 <h2>Import Results</h2>
-                <table class="results-table">
+                <table class="results-list-table">
                     <thead>
                         <tr>
                             <th>Character</th>
@@ -432,7 +426,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
                                 <td><strong><?php echo htmlspecialchars($res['character']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($res['album']); ?></td>
                                 <td><?php echo (int)$res['files_imported']; ?></td>
-                                <td><a class="r-url" href="<?php echo htmlspecialchars($res['randomizer_url']); ?>" target="_blank"><?php echo htmlspecialchars($res['randomizer_url']); ?></a></td>
+                                <td><a class="link-url-text" href="<?php echo htmlspecialchars($res['randomizer_url']); ?>" target="_blank"><?php echo htmlspecialchars($res['randomizer_url']); ?></a></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
