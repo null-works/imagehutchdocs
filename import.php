@@ -1,13 +1,16 @@
 <?php
-define('ACCESS', true);
-require_once '/var/www/html/app/legacy/load/loader.php';
+define('ACCESS', 'web');
+require_once '/var/www/html/app/legacy/load/php-boot.php';
+
+use Chevereto\Legacy\Classes\Login;
 
 // Only logged in users can access the tool
-if (!CHV\Login::isLoggedUser()) {
-    CHV\Redirect::to(get_base_url());
+if (!Login::isLoggedUser()) {
+    header("Location: /");
+    exit;
 }
 
-$currentUser = CHV\Login::getUser();
+$currentUser = Login::getUser();
 $userId = $currentUser['id'];
 
 $output_results = [];
