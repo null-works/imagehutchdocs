@@ -17,12 +17,7 @@ Options -MultiViews
 	RewriteRule . - [L]
 
 	# Redirect missing local images to external R2 storage
-
 	RewriteRule ^/?images/(.+)$ https://media.imagehut.ch/images/$1 [R=301,NC,L]
-
-
-
-
 
 	# Randomizer
 	RewriteRule ^randomizer/(.+)\.gif$ http://%{HTTP_HOST}/i/?album=$1 [R=301,L]
