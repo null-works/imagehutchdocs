@@ -1,12 +1,6 @@
 <?php
-try {
-    $pdo = new PDO('mysql:host=chevereto-database-1;dbname=chevereto', 'chevereto', 'chevereto_secure_password_456');
-    $stmt = $pdo->prepare("SELECT setting_name FROM chv_settings");
-    $stmt->execute();
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($rows as $row) {
-        echo $row['setting_name'] . "\n";
-    }
-} catch (PDOException $e) {
-    echo "Connection failed: " . $e->getMessage();
-}
+define('ACCESS', true);
+require_once '/var/www/html/app/legacy/load/loader.php';
+// Let's print out the crypt_salt setting
+echo "Crypt salt: " . getSetting('crypt_salt') . "\n";
+echo "Id padding: " . getSetting('id_padding') . "\n";
