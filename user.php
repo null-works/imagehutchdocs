@@ -121,6 +121,9 @@ if (Handler::cond('owner') || Handler::cond('content_manager')) {
 			<span class="user-status-label"><?php _se('Staff'); ?></span>
 			<?php
                 } ?>
+			<?php
+                if (Handler::cond('show_followers')) {
+                    ?>
 			<div class="user-meta">
 				<a class="number-figures display-inline-block margin-bottom-5" href="<?php echo Handler::var('user')['url_following']; ?>"><b data-text="following-count"><?php echo Handler::var('user')['following']; ?></b> <span><?php _se('Following'); ?></span></a>
 				<a class="number-figures display-inline-block margin-bottom-5" href="<?php echo Handler::var('user')['url_followers']; ?>"><b data-text="followers-count"><?php echo Handler::var('user')['followers']; ?></b> <span data-text="followers-label" data-label-single="<?php _ne('Follower', 'Followers', 1); ?>" data-label-plural="<?php _ne('Follower', 'Followers', 2); ?>"><?php _ne('Follower', 'Followers', Handler::var('user')['followers']); ?></span></a>
