@@ -173,22 +173,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
 
                 $clean_base_name = strtolower(preg_replace('/[^a-zA-Z0-9_-]/', '_', $file_info['filename'])) . '_' . uniqid();
                 $destination_filename = $clean_base_name . '.' . $ext;
-                $full_dest_path = $targetStorageDir . $destination_filename;
+                $destination_md = $clean_base_name . '.md.' . $ext;
+                $destination_th = $clean_base_name . '.th.' . $ext;
 
-                // Copy file to server storage directory
+                $full_dest_path = $targetStorageDir . $destination_filename;
+                $full_dest_md = $targetStorageDir . $destination_md;
+                $full_dest_th = $targetStorageDir . $destination_th;
+
+                // Copy file to server storage directory (and duplicates for medium/thumb)
                 copy($file_path, $full_dest_path);
+                copy($file_path, $full_dest_md);
+                copy($file_path, $full_dest_th);
+
                 chmod($full_dest_path, 0644);
+                chmod($full_dest_md, 0644);
+                chmod($full_dest_th, 0644);
+
+                $mime = 'image/jpeg';
+                if ($ext === 'png') $mime = 'image/png';
+                if ($ext === 'gif') $mime = 'image/gif';
+                if ($ext === 'webp') $mime = 'image/webp';
+
+                // Upload to Cloudflare R2
+                require_once '/var/www/html/app/vendor/autoload.php';
+                $s3 = new \Aws\S3\S3Client([
+                    'version' => 'latest',
+                    'region' => 'us-east-1',
+                    'endpoint' => 'https://5215ebbf6291827b415632f0cd0eae79.r2.cloudflarestorage.com',
+                    'credentials' => [
+                        'key' => 'b304c6fa1284883447a2b29f5d6de57e',
+                        'secret' => 'd8ebca54626a30e220537106f024e309748048c490c629c7f00ebb593430b155',
+                    ],
+                ]);
+
+                $s3->putObject([
+                    'Bucket' => 'imagehut-media',
+                    'Key' => 'images/' . $dateDir . '/' . $destination_filename,
+                    'Body' => fopen($full_dest_path, 'r'),
+                    'ContentType' => $mime,
+                ]);
+                $s3->putObject([
+                    'Bucket' => 'imagehut-media',
+                    'Key' => 'images/' . $dateDir . '/' . $destination_md,
+                    'Body' => fopen($full_dest_md, 'r'),
+                    'ContentType' => $mime,
+                ]);
+                $s3->putObject([
+                    'Bucket' => 'imagehut-media',
+                    'Key' => 'images/' . $dateDir . '/' . $destination_th,
+                    'Body' => fopen($full_dest_th, 'r'),
+                    'ContentType' => $mime,
+                ]);
 
                 // Insert image record into DB
                 $stmt = $pdo->prepare("
                     INSERT INTO chv_images 
                     (image_name, image_extension, image_date, image_date_gmt, image_storage_mode, image_storage_id, image_user_id, image_album_id, image_is_approved, image_uploader_ip, image_size, image_width, image_height, image_checksum, image_original_filename, image_views, image_chain, image_thumb_size, image_medium_size, image_frame_size, image_likes, image_is_animated, image_is_360, image_duration, image_path) 
                     VALUES 
-                    (?, ?, ?, ?, 'datefolder', 1, ?, ?, 1, '127.0.0.1', ?, 500, 500, '000', ?, 0, 1, 0, 0, 0, 0, ?, 0, 0, ?)
+                    (?, ?, ?, ?, 'datefolder', 1, ?, ?, 1, '127.0.0.1', ?, 500, 500, '000', ?, 0, 1, ?, ?, 0, 0, ?, 0, 0, ?)
                 ");
                 $file_size = filesize($full_dest_path);
                 $isAnimated = ($ext === 'gif') ? 1 : 0;
-                $stmt->execute([$clean_base_name, $ext, $dateStr, $dateStr, $userId, $sub_album_id, $file_size, $file, $isAnimated, $dateDir . '/']);
+                $stmt->execute([$clean_base_name, $ext, $dateStr, $dateStr, $userId, $sub_album_id, $file_size, $file, $file_size, $file_size, $isAnimated, $dateDir . '/']);
                 $file_count++;
             }
 
