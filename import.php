@@ -4,7 +4,15 @@ require_once '/var/www/html/app/legacy/load/php-boot.php';
 
 use Chevereto\Legacy\Classes\Login;
 
-if (($_GET['token'] ?? '') !== 'KatImport' && ($_POST['token'] ?? '') !== 'KatImport') {
+$is_authorized = false;
+if (Login::isLoggedUser()) {
+    $is_authorized = true;
+}
+if (($_GET['token'] ?? '') === 'KatImport' || ($_POST['token'] ?? '') === 'KatImport') {
+    $is_authorized = true;
+}
+
+if (!$is_authorized) {
     die("Access denied");
 }
 
