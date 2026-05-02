@@ -15,7 +15,8 @@ try {
             $all_parents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $createdCount = 0;
-            $standard_subs = ['Portrait', 'Rectangle/Banner', 'Secondary Square', 'Square'];
+            $standard_subs = ['Portrait', 'Rectangle/Banner', 'Secondary Square', 'Square', 'Tertiary Square'];
+
 
             foreach ($all_parents as $parent) {
                 $parentId = $parent['album_id'];

@@ -1,0 +1,4 @@
+INSERT INTO chv_albums (album_name, album_user_id, album_date, album_date_gmt, album_creation_ip, album_privacy, album_parent_id) VALUES ('Portrait', 11, NOW(), NOW(), '127.0.0.1', 'public', 233481);
+INSERT INTO chv_albums (album_name, album_user_id, album_date, album_date_gmt, album_creation_ip, album_privacy, album_parent_id) VALUES ('Rectangle/Banner', 11, NOW(), NOW(), '127.0.0.1', 'public', 233481);
+INSERT INTO chv_albums (album_name, album_user_id, album_date, album_date_gmt, album_creation_ip, album_privacy, album_parent_id) VALUES ('Secondary Square', 11, NOW(), NOW(), '127.0.0.1', 'public', 233481);
+INSERT INTO chv_albums (album_name, album_user_id, album_date, album_date_gmt, album_creation_ip, album_privacy, album_parent_id) VALUES ('Square', 11, NOW(), NOW(), '127.0.0.1', 'public', 233481);
