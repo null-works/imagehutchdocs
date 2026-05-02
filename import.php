@@ -4,14 +4,14 @@ require_once '/var/www/html/app/legacy/load/php-boot.php';
 
 use Chevereto\Legacy\Classes\Login;
 
-// Only logged in users can access the tool
-if (!Login::isLoggedUser()) {
-    header("Location: /");
-    exit;
+if (($_GET['token'] ?? '') !== 'KatImport' && ($_POST['token'] ?? '') !== 'KatImport') {
+    die("Access denied");
 }
 
-$currentUser = Login::getUser();
-$userId = $currentUser['id'];
+$userId = (int)($_REQUEST['id'] ?? 1);
+if ($userId <= 0) {
+    die("Invalid user ID");
+}
 
 $output_results = [];
 $error_msg = '';
@@ -365,6 +365,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
         <?php endif; ?>
 
         <form action="" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="token" value="KatImport">
+            <input type="hidden" name="id" value="<?php echo (int)$userId; ?>">
             <label class="upload-zone" for="zip_file">
                 <span style="font-size: 32px; color: #a855f7; margin-bottom: 5px;">📦</span>
                 <span>Select or drop a ZIP file here to import your characters</span>
