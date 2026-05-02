@@ -24,23 +24,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdo_gen = new PDO('mysql:host=chevereto-database-1;dbname=chevereto', 'chevereto', 'chevereto_secure_password_456');
         $pdo_gen->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $album_id = Handler::var('album')['id'];
+        $parent_album_id = Handler::var('album')['id'];
         $user_id = Handler::var('album')['user_id'];
+        $char_name = trim($_POST['character_name'] ?? '');
 
-        $sub_albums_to_create = [
-            'Portrait',
-            'Rectangle/Banner',
-            'Secondary Square',
-            'Square',
-            'Tertiary Square'
-        ];
+        if ($char_name !== '') {
+            // 1. Create the top-level character album inside the current album
+            $stmt_new_char = $pdo_gen->prepare("INSERT INTO chv_albums (album_name, album_user_id, album_parent_id, album_date, album_date_gmt, album_creation_ip) VALUES (?, ?, ?, NOW(), NOW(), '127.0.0.1')");
+            $stmt_new_char->execute([$char_name, $user_id, $parent_album_id]);
+            $new_char_album_id = $pdo_gen->lastInsertId();
 
-        foreach ($sub_albums_to_create as $sub_name) {
-            $stmt_check = $pdo_gen->prepare("SELECT COUNT(*) FROM chv_albums WHERE album_parent_id = ? AND album_name = ?");
-            $stmt_check->execute([$album_id, $sub_name]);
-            if ($stmt_check->fetchColumn() == 0) {
+            // 2. Create the 5 standard sub-albums inside that new character album
+            $sub_albums_to_create = [
+                'Portrait',
+                'Rectangle/Banner',
+                'Secondary Square',
+                'Square',
+                'Tertiary Square'
+            ];
+
+            foreach ($sub_albums_to_create as $sub_name) {
                 $stmt_insert = $pdo_gen->prepare("INSERT INTO chv_albums (album_name, album_user_id, album_parent_id, album_date, album_date_gmt, album_creation_ip) VALUES (?, ?, ?, NOW(), NOW(), '127.0.0.1')");
-                $stmt_insert->execute([$sub_name, $user_id, $album_id]);
+                $stmt_insert->execute([$sub_name, $user_id, $new_char_album_id]);
             }
         }
 
@@ -248,11 +253,15 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     ?>
     <?php if ($is_root_album && (Handler::cond('owner') || Handler::cond('content_manager'))): ?>
-    <div style="margin-top: 20px; margin-bottom: 25px; display: flex; justify-content: flex-end;">
-        <form method="POST">
+    <div style="margin-top: 25px; margin-bottom: 25px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 18px 24px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin: 0;">
+            <span class="fas fa-user-plus" style="color: #38bdf8;"></span> Create New Character Subalbum Hierarchy
+        </h3>
+        <form method="POST" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
             <input type="hidden" name="action" value="generate_hierarchy">
-            <button type="submit" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35); transition: all 0.2s ease; outline: none;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 18px rgba(2, 132, 199, 0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(2, 132, 199, 0.35)';">
-                <span class="fas fa-magic" style="color: #38bdf8; font-size: 1.1rem;"></span> Generate Character Hierarchy
+            <input type="text" name="character_name" placeholder="Character Name (e.g., Wanda Maximoff)" required style="flex: 1; min-width: 260px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 12px 16px; border-radius: 8px; font-size: 0.95rem; outline: none; transition: all 0.2s ease;" onfocus="this.style.border='1px solid #38bdf8'; this.style.background='rgba(255,255,255,0.08)'" onblur="this.style.border='1px solid rgba(255,255,255,0.15)'; this.style.background='rgba(255,255,255,0.05)'">
+            <button type="submit" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35); transition: all 0.2s ease; outline: none;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 18px rgba(2, 132, 199, 0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(2, 132, 199, 0.35)';">
+                <span class="fas fa-magic" style="color: #38bdf8; font-size: 1.1rem;"></span> Generate
             </button>
         </form>
     </div>
