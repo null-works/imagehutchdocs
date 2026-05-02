@@ -3,73 +3,6 @@ session_start();
 define('ACCESS', 'web');
 require_once '/var/www/html/app/legacy/load/php-boot.php';
 
-$token = $_REQUEST['token'] ?? $_SESSION['import_token'] ?? '';
-
-if ($token === 'KatImport') {
-    $_SESSION['import_token'] = 'KatImport';
-} else {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auth_token'])) {
-        if ($_POST['auth_token'] === 'KatImport') {
-            $_SESSION['import_token'] = 'KatImport';
-            header("Location: " . $_SERVER['REQUEST_URI']);
-            exit;
-        } else {
-            $auth_error = "Invalid token. Please try again.";
-        }
-    }
-    ?>
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Access Token Required - ImageHut</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-            body {
-                margin: 0; padding: 0; font-family: 'Inter', sans-serif;
-                background: linear-gradient(135deg, #090d16, #111827, #18112b);
-                color: #f1f5f9; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-            }
-            .auth-box {
-                background: rgba(30, 41, 59, 0.45); backdrop-filter: blur(16px);
-                border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px;
-                padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-                text-align: center;
-            }
-            h1 { font-size: 24px; margin-bottom: 10px; background: linear-gradient(135deg, #a855f7, #6366f1, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            p { font-size: 14px; color: #94a3b8; margin-bottom: 25px; }
-            input[type="password"] {
-                width: 100%; padding: 12px 16px; margin-bottom: 15px; border-radius: 12px;
-                background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08);
-                color: #f1f5f9; font-size: 15px; outline: none; box-sizing: border-box;
-            }
-            input[type="password"]:focus { border-color: #a855f7; }
-            .btn-auth {
-                background: linear-gradient(135deg, #a855f7, #6366f1, #3b82f6); border: none;
-                color: white; padding: 14px 28px; font-size: 15px; font-weight: 600;
-                border-radius: 12px; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-            }
-            .alert { color: #f87171; font-size: 14px; margin-bottom: 15px; }
-        </style>
-    </head>
-    <body>
-        <div class="auth-box">
-            <h1>Access Token Required</h1>
-            <p>Please enter the secret token to access the Character Migration tool.</p>
-            <?php if (!empty($auth_error)): ?>
-                <div class="alert"><?php echo htmlspecialchars($auth_error); ?></div>
-            <?php endif; ?>
-            <form action="" method="POST">
-                <input type="password" name="auth_token" placeholder="Enter access token" required autofocus>
-                <button type="submit" class="btn-auth">Unlock Tool</button>
-            </form>
-        </div>
-    </body>
-    </html>
-    <?php
-    exit;
-}
-
 $pdo = new PDO("mysql:host=chevereto-database-1;dbname=chevereto", "chevereto", "chevereto_secure_password_456");
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -476,8 +409,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
         <?php endif; ?>
 
         <form action="" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="token" value="KatImport">
-
             <div class="form-group">
                 <label for="target_user">Target Destination Account</label>
                 <select id="target_user" name="target_user" required>
