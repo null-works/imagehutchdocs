@@ -60,11 +60,13 @@ $tabs = Handler::var('tabs');
 <?php require_theme_header(); ?>
 <?php if (isset(Handler::var('user')["background"]) || Handler::cond('owner') || Handler::cond('content_manager')) { ?>
 <div id="background-cover" data-content="user-background-cover"<?php if (!isset(Handler::var('user')["background"])) {
-            ?> class="no-background"<?php
+            ?> class="no-background" style="background: linear-gradient(135deg, #0f172a, #1e1b4b, #311042) !important;"<?php
         } ?>>
 	<div id="background-cover-wrap">
 		<div id="background-cover-src" data-content="user-background-cover-src"<?php if (isset(Handler::var('user')["background"], Handler::var('user')["background"]["url"])) {
             ?> style="background-image: url('<?php echo Handler::var('user')["background"]["url"]; ?>');"<?php
+        } else {
+            ?> style="background: linear-gradient(135deg, #0f172a, #1e1b4b, #311042) !important;"<?php
         } ?>></div>
 <?php
 if (Handler::cond('owner') || Handler::cond('content_manager')) {
