@@ -94,93 +94,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
         $dateStr = date('Y-m-d H:i:s');
 
         // Scan character folders inside extracted ZIP
+        $known_folders = ['Portrait', 'Rectangle_Banner', 'Rectangle/Banner', 'Secondary Square', 'Square', 'Tertiary Square'];
+        $source_dir = $extract_dir;
+        $zip_folder_name = '';
+
         $items = scandir($extract_dir);
         foreach ($items as $item) {
-            if ($item === '.' || $item === '..' || !is_dir($extract_dir . '/' . $item) || strpos($item, '__MACOSX') === 0) continue;
+            if ($item === '.' || $item === '..' || strpos($item, '__MACOSX') === 0) continue;
+            if (is_dir($extract_dir . '/' . $item)) {
+                $sub_items = scandir($extract_dir . '/' . $item);
+                foreach ($sub_items as $si) {
+                    if (in_array(trim($si), $known_folders)) {
+                        $source_dir = $extract_dir . '/' . $item;
+                        $zip_folder_name = trim($item);
+                        break 2;
+                    }
+                }
+            }
+        }
 
-            $character_name = trim($item);
+        $character_name = trim($_POST['character_name'] ?? '');
+        if (empty($character_name)) {
+            $character_name = !empty($zip_folder_name) ? $zip_folder_name : 'Unknown Character';
+        }
 
-            // Get or create parent character album
-            $stmt = $pdo->prepare("SELECT album_id FROM chv_albums WHERE album_user_id = ? AND album_name = ? AND album_parent_id IS NULL");
-            $stmt->execute([$userId, $character_name]);
-            $parent_album_id = $stmt->fetchColumn();
+        // Get or create parent character album
+        $stmt = $pdo->prepare("SELECT album_id FROM chv_albums WHERE album_user_id = ? AND album_name = ? AND album_parent_id IS NULL");
+        $stmt->execute([$userId, $character_name]);
+        $parent_album_id = $stmt->fetchColumn();
 
-            if (!$parent_album_id) {
-                $stmt = $pdo->prepare("INSERT INTO chv_albums (album_user_id, album_name, album_privacy, album_date, album_date_gmt, album_creation_ip) VALUES (?, ?, 'public', ?, ?, '127.0.0.1')");
-                $stmt->execute([$userId, $character_name, $dateStr, $dateStr]);
-                $parent_album_id = $pdo->lastInsertId();
+        if (!$parent_album_id) {
+            $stmt = $pdo->prepare("INSERT INTO chv_albums (album_user_id, album_name, album_privacy, album_date, album_date_gmt, album_creation_ip) VALUES (?, ?, 'public', ?, ?, '127.0.0.1')");
+            $stmt->execute([$userId, $character_name, $dateStr, $dateStr]);
+            $parent_album_id = $pdo->lastInsertId();
+        }
+
+        // Loop through sub-folders for each category
+        $sub_items = scandir($source_dir);
+        foreach ($sub_items as $sub_item) {
+            if ($sub_item === '.' || $sub_item === '..' || !is_dir($source_dir . '/' . $sub_item)) continue;
+
+            $sub_album_name = trim($sub_item);
+
+            // Map ZIP folder Rectangle_Banner to Rectangle/Banner in Chevereto
+            if ($sub_album_name === 'Rectangle_Banner') {
+                $sub_album_name = 'Rectangle/Banner';
             }
 
-            // Loop through sub-folders for each category
-            $sub_items = scandir($extract_dir . '/' . $item);
-            foreach ($sub_items as $sub_item) {
-                if ($sub_item === '.' || $sub_item === '..' || !is_dir($extract_dir . '/' . $item . '/' . $sub_item)) continue;
-
-                $sub_album_name = trim($sub_item);
-
-                // Map ZIP folder Rectangle_Banner to Rectangle/Banner in Chevereto
-                if ($sub_album_name === 'Rectangle_Banner') {
-                    $sub_album_name = 'Rectangle/Banner';
-                }
-
-                // Skip Avatar URL just in case some legacy ZIPs contain it
-                if ($sub_album_name === 'Avatar URL') {
-                    continue;
-                }
-
-                // Check if sub-album exists
-                $stmt = $pdo->prepare("SELECT album_id FROM chv_albums WHERE album_user_id = ? AND album_name = ? AND album_parent_id = ?");
-                $stmt->execute([$userId, $sub_album_name, $parent_album_id]);
-                $sub_album_id = $stmt->fetchColumn();
-
-                if (!$sub_album_id) {
-                    $stmt = $pdo->prepare("INSERT INTO chv_albums (album_user_id, album_name, album_parent_id, album_privacy, album_date, album_date_gmt, album_creation_ip) VALUES (?, ?, ?, 'public', ?, ?, '127.0.0.1')");
-                    $stmt->execute([$userId, $sub_album_name, $parent_album_id, $dateStr, $dateStr]);
-                    $sub_album_id = $pdo->lastInsertId();
-                }
-
-                $encoded_id = cheveretoID($sub_album_id, 'encode');
-                $randomizer_url = "https://imagehut.ch/randomizer/" . $encoded_id . ".gif";
-
-                // Process files inside sub-album
-                $files = scandir($extract_dir . '/' . $item . '/' . $sub_item);
-                $file_count = 0;
-                foreach ($files as $file) {
-                    $file_path = $extract_dir . '/' . $item . '/' . $sub_item . '/' . $file;
-                    if ($file === '.' || $file === '..' || !is_file($file_path)) continue;
-
-                    $file_info = pathinfo($file);
-                    $ext = strtolower($file_info['extension'] ?? '');
-                    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) continue;
-
-                    $clean_base_name = strtolower(preg_replace('/[^a-zA-Z0-9_-]/', '_', $file_info['filename'])) . '_' . uniqid();
-                    $destination_filename = $clean_base_name . '.' . $ext;
-                    $full_dest_path = $targetStorageDir . $destination_filename;
-
-                    // Copy file to server storage directory
-                    copy($file_path, $full_dest_path);
-                    chmod($full_dest_path, 0644);
-
-                    // Insert image record into DB
-                    $stmt = $pdo->prepare("
-                        INSERT INTO chv_images 
-                        (image_name, image_extension, image_date, image_date_gmt, image_storage_mode, image_storage_id, image_user_id, image_album_id, image_is_approved, image_uploader_ip, image_size, image_width, image_height, image_checksum, image_original_filename, image_views, image_chain, image_thumb_size, image_medium_size, image_frame_size, image_likes, image_is_animated, image_is_360, image_duration, image_path) 
-                        VALUES 
-                        (?, ?, ?, ?, 'datefolder', 1, ?, ?, 1, '127.0.0.1', ?, 500, 500, '000', ?, 0, 1, 0, 0, 0, 0, ?, 0, 0, ?)
-                    ");
-                    $file_size = filesize($full_dest_path);
-                    $isAnimated = ($ext === 'gif') ? 1 : 0;
-                    $stmt->execute([$clean_base_name, $ext, $dateStr, $dateStr, $userId, $sub_album_id, $file_size, $file, $isAnimated, $dateDir . '/']);
-                    $file_count++;
-                }
-
-                $output_results[] = [
-                    'character' => $character_name,
-                    'album' => $sub_album_name,
-                    'files_imported' => $file_count,
-                    'randomizer_url' => $randomizer_url
-                ];
+            // Skip Avatar URL just in case some legacy ZIPs contain it
+            if ($sub_album_name === 'Avatar URL') {
+                continue;
             }
+
+            // Check if sub-album exists
+            $stmt = $pdo->prepare("SELECT album_id FROM chv_albums WHERE album_user_id = ? AND album_name = ? AND album_parent_id = ?");
+            $stmt->execute([$userId, $sub_album_name, $parent_album_id]);
+            $sub_album_id = $stmt->fetchColumn();
+
+            if (!$sub_album_id) {
+                $stmt = $pdo->prepare("INSERT INTO chv_albums (album_user_id, album_name, album_parent_id, album_privacy, album_date, album_date_gmt, album_creation_ip) VALUES (?, ?, ?, 'public', ?, ?, '127.0.0.1')");
+                $stmt->execute([$userId, $sub_album_name, $parent_album_id, $dateStr, $dateStr]);
+                $sub_album_id = $pdo->lastInsertId();
+            }
+
+            $encoded_id = cheveretoID($sub_album_id, 'encode');
+            $randomizer_url = "https://imagehut.ch/randomizer/" . $encoded_id . ".gif";
+
+            // Process files inside sub-album
+            $files = scandir($source_dir . '/' . $sub_item);
+            $file_count = 0;
+            foreach ($files as $file) {
+                $file_path = $source_dir . '/' . $sub_item . '/' . $file;
+                if ($file === '.' || $file === '..' || !is_file($file_path)) continue;
+
+                $file_info = pathinfo($file);
+                $ext = strtolower($file_info['extension'] ?? '');
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) continue;
+
+                $clean_base_name = strtolower(preg_replace('/[^a-zA-Z0-9_-]/', '_', $file_info['filename'])) . '_' . uniqid();
+                $destination_filename = $clean_base_name . '.' . $ext;
+                $full_dest_path = $targetStorageDir . $destination_filename;
+
+                // Copy file to server storage directory
+                copy($file_path, $full_dest_path);
+                chmod($full_dest_path, 0644);
+
+                // Insert image record into DB
+                $stmt = $pdo->prepare("
+                    INSERT INTO chv_images 
+                    (image_name, image_extension, image_date, image_date_gmt, image_storage_mode, image_storage_id, image_user_id, image_album_id, image_is_approved, image_uploader_ip, image_size, image_width, image_height, image_checksum, image_original_filename, image_views, image_chain, image_thumb_size, image_medium_size, image_frame_size, image_likes, image_is_animated, image_is_360, image_duration, image_path) 
+                    VALUES 
+                    (?, ?, ?, ?, 'datefolder', 1, ?, ?, 1, '127.0.0.1', ?, 500, 500, '000', ?, 0, 1, 0, 0, 0, 0, ?, 0, 0, ?)
+                ");
+                $file_size = filesize($full_dest_path);
+                $isAnimated = ($ext === 'gif') ? 1 : 0;
+                $stmt->execute([$clean_base_name, $ext, $dateStr, $dateStr, $userId, $sub_album_id, $file_size, $file, $isAnimated, $dateDir . '/']);
+                $file_count++;
+            }
+
+            $output_results[] = [
+                'character' => $character_name,
+                'album' => $sub_album_name,
+                'files_imported' => $file_count,
+                'randomizer_url' => $randomizer_url
+            ];
         }
 
         // Cleanup temporary directory
@@ -396,6 +413,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['zip_file'])) {
                         </option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+            <div class="form-field">
+                <label class="field-heading" for="character_name">Character Name (Optional)</label>
+                <input type="text" id="character_name" name="character_name" placeholder="E.g. Kimberly Parson" style="background-color: #2b303d; border: 1px solid #3d4659; border-radius: 4px; color: #ffffff; font-size: 14px; padding: 12px; width: 100%; box-sizing: border-box;" value="<?php echo isset($_POST['character_name']) ? htmlspecialchars($_POST['character_name']) : ''; ?>">
             </div>
 
             <label class="confirm-wrapper">
