@@ -187,6 +187,7 @@ if (Handler::cond('owner') || Handler::cond('content_manager')) {
 			<?php
                 if (Handler::cond('owner') || Handler::cond('content_manager')) {
                     ?>
+				<button onclick="fetch('/refresh_counts.php?id=<?php echo Handler::var('user')['id']; ?>').then(r => window.location.reload())" title="Recalculate and Refresh Counters" class="btn btn-small default"><span class="btn-icon fas fa-sync-alt"></span></button>
 				<button data-action="create-album" title="<?php _se('Create new %s', _n('album', 'albums', 1)); ?> (A)" class="btn btn-small default" data-modal="edit" data-target="new-album"><span class="btn-icon fas fa-images"></span></button>
 				<?php require_theme_file('snippets/modal_create_album.php'); ?>
                 <?php
