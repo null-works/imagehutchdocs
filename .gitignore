@@ -1,0 +1,6 @@
+scratch/askpass.bat
+scratch/pass.txt
+scratch/*.bak
+scratch/403_body.html
+# Ignore password-containing scripts if necessary, or just keep the templates
+# For now, I'll just ignore the askpass.bat which is the most sensitive
